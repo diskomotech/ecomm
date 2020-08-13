@@ -15,45 +15,49 @@ class UsersRepository {
       fs.accessSync(this.filename);
     } catch (err) {
       fs.writeFileSync(this.filename, '[]');
-    }   
+    }
   }
 
   async getAll() {
-    return JSON.parse(await fs.promises.readFile(this.filename, { 
-      encoding: 'utf8' 
-    }));
+    return JSON.parse(
+      await fs.promises.readFile(this.filename, {
+        encoding: 'utf8'
+      })
+    );
   }
 
   async create(attrs) {
     attrs.id = this.randomId();
 
     const salt = crypto.randomBytes(8).toString('hex');
-    const buff = await scrypt(attrs.password, salt, 64);
+    const buf = await scrypt(attrs.password, salt, 64);
 
     const records = await this.getAll();
     const record = {
       ...attrs,
-      password: `${buff.toString('hex')}.${salt}`
+      password: `${buf.toString('hex')}.${salt}`
     };
     records.push(record);
 
     await this.writeAll(records);
-    
+
     return record;
   }
 
   async comparePasswords(saved, supplied) {
-    // Saved -> password in our database. 'hashed.salt'
-    // Supplied -> password given to us by user trying to sign in
-
+    // Saved -> password saved in our database. 'hashed.salt'
+    // Supplied -> password given to us by a user trying sign in
     const [hashed, salt] = saved.split('.');
-    const hashedSupplied = await scrypt(supplied, salt, 64);
+    const hashedSuppliedBuf = await scrypt(supplied, salt, 64);
 
-    return hashed === hashedSupplied.toString('hex');
+    return hashed === hashedSuppliedBuf.toString('hex');
   }
 
   async writeAll(records) {
-    await fs.promises.writeFile(this.filename, JSON.stringify(records, null, 2));
+    await fs.promises.writeFile(
+      this.filename,
+      JSON.stringify(records, null, 2)
+    );
   }
 
   randomId() {
@@ -94,11 +98,12 @@ class UsersRepository {
           found = false;
         }
       }
+
       if (found) {
         return record;
       }
     }
-  };
+  }
 }
 
 module.exports = new UsersRepository('users.json');
